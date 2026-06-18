@@ -29,50 +29,67 @@ See [CODING_TEST.md](CODING_TEST.md) for the full requirements.
 ```
 code/
 ├── app/
-│   ├── Actions/Fortify/          # User creation & password reset actions
-│   ├── Concerns/                 # Shared validation rule traits
+│   ├── Console/Commands/
+│   │   └── SendEventReminders.php    # Scheduled reminder command (--hours=72|24)
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── EventController.php   # Events listing, data API, detail
-│   │   │   └── Settings/             # Profile, security controllers
-│   │   ├── Middleware/               # Appearance, Inertia shared data
-│   │   └── Requests/Settings/        # Form request classes
+│   │   │   ├── AttendeeController.php  # Attendee registration
+│   │   │   ├── EventController.php     # Listing, data API, show, visual pages
+│   │   │   └── Settings/
+│   │   └── Middleware/
+│   ├── Jobs/
+│   │   ├── SendAttendeeConfirmation.php  # Queued — on registration
+│   │   └── SendAttendeeReminder.php      # Queued — dispatched by reminder command
+│   ├── Mail/
+│   │   ├── AttendeeConfirmation.php
+│   │   └── AttendeeReminder.php
 │   ├── Models/
-│   │   ├── Event.php                 # UUID primary key, payload JSON cast
+│   │   ├── Attendee.php
+│   │   ├── Event.php              # UUID PK, payload JSON cast
+│   │   ├── EventImage.php         # url() helper → asset()
 │   │   └── User.php
-│   └── Providers/
-│       ├── AppServiceProvider.php
-│       └── FortifyServiceProvider.php
+│   ├── Services/
+│   │   └── LocationService.php    # Haversine nearest-neighbour → city label + IANA timezone
+│   └── Support/
+│       └── EventDateFormatter.php # Shared date formatter used by both jobs
 ├── database/
-│   ├── factories/                    # EventFactory, UserFactory
-│   ├── migrations/                   # Users, cache, jobs, passkeys, events, 2FA
+│   ├── factories/                 # EventFactory, UserFactory
+│   ├── migrations/
 │   └── seeders/
 │       ├── DatabaseSeeder.php
-│       └── EventSeeder.php           # Bulk-inserts up to 1.25M events
+│       ├── EventSeeder.php        # Bulk-inserts up to 1.25 M events
+│       └── EventImageSeeder.php   # 2 placeholder images per event
+├── public/images/events/          # placeholder-{1,2,3}.svg — served locally
 ├── resources/
-│   ├── css/app.css
-│   └── js/
-│       ├── app.ts                    # Inertia bootstrap
-│       ├── components/               # Shared app components
-│       │   └── ui/                   # alert, avatar, badge, breadcrumb, button,
-│       │                             # card, checkbox, collapsible, dialog,
-│       │                             # dropdown-menu, input, input-otp, label,
-│       │                             # navigation-menu, select, separator, sheet, …
-│       └── pages/
-│           ├── Events/
-│           │   ├── Index.vue         # Table view — infinite scroll, status + date filters
-│           │   ├── Show.vue          # Raw event detail (payload JSON)
-│           │   ├── VisualOne.vue     # [stub] Visual layout 1
-│           │   └── VisualTwo.vue     # [stub] Visual layout 2
-│           ├── auth/                 # Login, register, forgot/reset password, 2FA, verify email
-│           ├── settings/             # Profile, security, appearance
-│           ├── Dashboard.vue
-│           └── Welcome.vue
+│   ├── js/
+│   │   ├── components/
+│   │   │   ├── EventFilters.vue      # Shared filter bar (status / date / location)
+│   │   │   ├── RegisterInterest.vue  # Attendee registration form
+│   │   │   └── ui/                   # Reka UI / shadcn-style primitives
+│   │   ├── lib/date.ts               # Intl.DateTimeFormat wrappers
+│   │   ├── types/event.ts            # Shared EventRow / EventFilters interfaces
+│   │   └── pages/Events/
+│   │       ├── Index.vue             # Table view with infinite scroll
+│   │       ├── Show.vue              # Detail page — hero image, meta, registration
+│   │       ├── VisualOne.vue         # Card grid (1→4 col, staggered animations)
+│   │       └── VisualTwo.vue         # Vertical timeline, alternating, month dividers
+│   └── views/emails/attendee/
+│       ├── confirmation.blade.php
+│       └── reminder.blade.php
 ├── routes/
-│   ├── web.php                       # Public + event routes
-│   ├── settings.php                  # Authenticated settings routes
-│   └── console.php                   # Artisan schedule / console commands
-└── config/                           # Standard Laravel config files
+│   ├── web.php
+│   ├── settings.php
+│   └── console.php                # Schedule::command() for both reminder windows
+└── tests/
+    ├── Feature/
+    │   ├── AttendeeRegistrationTest.php
+    │   ├── EventFiltersTest.php
+    │   ├── EventListingTest.php
+    │   ├── EventShowTest.php
+    │   └── ReminderCommandTest.php
+    └── Unit/
+        ├── EventDateFormatterTest.php
+        └── LocationServiceTest.php
 ```
 
 ## Routes
@@ -80,11 +97,12 @@ code/
 | Method | URI | Name | Description |
 |---|---|---|---|
 | GET | `/` | `home` | Redirects to `/events` |
-| GET | `/events` | `events.index` | Event list (Inertia page) |
+| GET | `/events` | `events.index` | Event list with infinite scroll and filters |
 | GET | `/events/data` | `events.data` | JSON API — paginated events with stats |
-| GET | `/events/{event}` | `events.show` | Event detail page |
-| GET | `/events-visual-1` | `events.visual1` | Visual layout 1 (stub) |
-| GET | `/events-visual-2` | `events.visual2` | Visual layout 2 (stub) |
+| GET | `/events/{event}` | `events.show` | Detail page — images, meta, registration |
+| POST | `/events/{event}/attendees` | `events.attendees.store` | Register attendee interest |
+| GET | `/events-visual-1` | `events.visual1` | Card grid layout |
+| GET | `/events-visual-2` | `events.visual2` | Timeline layout |
 | GET | `/dashboard` | `dashboard` | Authenticated dashboard |
 
 Auth routes (Fortify): `/login`, `/register`, `/forgot-password`, `/reset-password`, `/two-factor-challenge`, `/verify-email`.
@@ -123,25 +141,20 @@ The `payload` JSON structure:
 
 ## Features
 
-### Implemented
-
-- **Event list** — infinite-scroll table with status and date filters, live stats (load time + payload size)
-- **Event detail** — raw payload viewer
+- **Event list** — infinite-scroll table with status, date, and location filters; live stats (load time + payload size)
+- **Event detail** — hero image with thumbnail switcher, meta row (date/timezone/location/venue/price), description, tags, registration sidebar
+- **Visual layout 1** — responsive card grid (1→4 columns), staggered entrance animations, hover zoom
+- **Visual layout 2** — vertical timeline, cards alternating left/right, month/year group dividers, two-image hover reveal
+- **Image support** — `event_images` table, two images per event, SVG placeholders served from `public/images/events/`
+- **Address resolution** — lat/lng → human-readable city label via Haversine nearest-neighbour lookup (no external API); IANA timezone included
+- **Timezone-aware dates** — backend resolves timezone from coordinates; frontend uses `Intl.DateTimeFormat`; emails format dates in PHP with `DateTimeImmutable`
+- **Filtering** — status, date range, and location (bounding-box query around city anchor); shared `EventFilters.vue` component
+- **Attendee registration** — `attendees` table with per-event unique email guard; `RegisterInterest.vue` with loading/success states
+- **Confirmation email** — queued `SendAttendeeConfirmation` job dispatched on registration; Laravel Markdown mailable
+- **Reminder emails** — `events:send-reminders --hours=72|24` command with ±30-min window; scheduled hourly via `routes/console.php`
 - **Authentication** — register, login, password reset, 2FA (TOTP), passkey support
 - **Settings** — profile management, password change, account deletion, appearance (light/dark/system)
-- **Large dataset** — seeder generates up to 1.25 M events across ~80 global city anchors spanning one year past to one year future
-
-### To Be Built (Coding Test)
-
-- **Event Visuals 1 & 2** — two distinct browsing layouts (e.g. card grid + timeline / map)
-- **Image support** — 2+ images per event, stored and served locally
-- **Human-readable addresses** — reverse geocode lat/lng
-- **Timezone-aware date/time** — sensible display for global events
-- **Filtering** — by date range and location
-- **Animations** — tasteful, Tailwind-based
-- **Attendee registration** — interest/attendance list per event
-- **Email confirmation** — sent when attendee is added
-- **Reminder emails** — scheduled 3 days and 24 hours before event start
+- **Large dataset** — seeder generates up to 1.25 M events across 67 global city anchors spanning ±1 year
 
 ## Local Setup
 
@@ -173,12 +186,14 @@ npm run build
 ### Seed the database
 
 ```bash
-# Default: 1,250,000 events
+# Default: 1,250,000 events + 2 placeholder images each
 php artisan db:seed
 
-# Custom row count
-SEED_ROWS=50000 php artisan db:seed
+# Lighter seed for local evaluation
+SEED_ROWS=10000 php artisan db:seed
 ```
+
+The seeder runs `EventSeeder` (events) followed by `EventImageSeeder` (images). Both use chunked bulk inserts so even the full 1.25 M row seed completes in under a minute on a modern machine.
 
 ### Development server
 
@@ -232,11 +247,137 @@ composer run ci:check
 
 ## Testing
 
+Tests use an in-memory SQLite database (`DB_DATABASE=:memory:`) with `QUEUE_CONNECTION=sync` and `MAIL_MAILER=array` so no external services are needed.
+
 ```bash
-php artisan test          # Run Pest test suite
+# Run the full Pest suite (85 tests)
+php artisan test
+
+# Run with verbose output — one line per test
+php artisan test --verbose
+
+# Run a specific test file
+php artisan test tests/Feature/AttendeeRegistrationTest.php
+php artisan test tests/Feature/EventFiltersTest.php
+php artisan test tests/Feature/EventShowTest.php
+php artisan test tests/Feature/ReminderCommandTest.php
+php artisan test tests/Unit/LocationServiceTest.php
+php artisan test tests/Unit/EventDateFormatterTest.php
+
+# Run a single test by name (partial match)
+php artisan test --filter "dispatches a confirmation job"
+
+# Run only unit tests or only feature tests
+php artisan test --testsuite Unit
+php artisan test --testsuite Feature
 ```
 
-Tests live in `tests/`. PHPStan config is in `phpstan.neon`, Pest config in `phpunit.xml`.
+### What's covered
+
+| Suite | File | Focus |
+|---|---|---|
+| Feature | `EventListingTest` | Index page props, data API pagination, status filter |
+| Feature | `AttendeeRegistrationTest` | Happy path, duplicate guard, validation, job dispatch, flash message |
+| Feature | `EventFiltersTest` | `date_from`, `date_to`, date range, location bounding box, combined filters |
+| Feature | `EventShowTest` | Image URLs, location label, timezone, null coords → UTC, attendee count |
+| Feature | `ReminderCommandTest` | 72 h / 24 h windows, multi-attendee, out-of-window, draft exclusion, no-attendee skip |
+| Unit | `LocationServiceTest` | Haversine nearest-neighbour, jitter tolerance, `anchorFor`, sorted city list |
+| Unit | `EventDateFormatterTest` | Single time, same-day range, multi-day range, null fallback, midnight crossover |
+
+### Static analysis and linting
+
+```bash
+composer run lint         # Auto-fix PHP style (Pint)
+composer run types:check  # PHPStan static analysis
+composer run ci:check     # Lint + PHPStan + Pest (what CI runs)
+```
+
+---
+
+## Evaluating the app with Tinker
+
+After running migrations and seeding, use Tinker to explore the data and trigger email flows without needing a browser:
+
+```bash
+php artisan tinker
+```
+
+### Check seeded data
+
+```php
+// Count events by status
+Event::query()->selectRaw('status, count(*) as n')->groupBy('status')->get();
+
+// Sample a random published event with its images
+$event = Event::where('status', 'published')->with('images')->inRandomOrder()->first();
+$event->payload['name'];       // event title
+$event->images->map->url();    // image asset URLs
+$event->latitude;              // coordinates
+```
+
+### Resolve a location and timezone
+
+```php
+$svc = app(App\Services\LocationService::class);
+
+// Nearest city and IANA timezone for any coordinates
+$svc->resolve(35.6762, 139.6503);
+// → ['label' => 'Tokyo, Japan', 'city' => 'Tokyo', 'timezone' => 'Asia/Tokyo', ...]
+
+// City anchor used by the bounding-box location filter
+$svc->anchorFor('London, United Kingdom');
+// → ['lat' => 51.5074, 'lng' => -0.1278]
+
+// All city options (for the location dropdown)
+count($svc->cities());
+```
+
+### Register an attendee and trigger the confirmation email
+
+```php
+$event = Event::where('status', 'published')->first();
+
+// Create an attendee (triggers queued job; with QUEUE_CONNECTION=sync it runs immediately)
+$attendee = $event->attendees()->create([
+    'name'  => 'Ada Lovelace',
+    'email' => 'ada@example.com',
+]);
+
+// Dispatch the confirmation email synchronously and inspect the log
+App\Jobs\SendAttendeeConfirmation::dispatchSync($attendee);
+// → check storage/logs/laravel.log for the rendered email
+```
+
+### Preview reminder emails
+
+```php
+// Pin an event to the 72-hour window and dispatch a test reminder
+$event = Event::where('status', 'published')->first();
+$event->update(['created_time' => now()->addHours(72)->getTimestamp()]);
+$attendee = $event->attendees()->firstOrCreate(
+    ['email' => 'test@example.com'],
+    ['name'  => 'Test User']
+);
+App\Jobs\SendAttendeeReminder::dispatchSync($attendee, 72, '3 days');
+// → check storage/logs/laravel.log
+```
+
+### Dry-run the reminder command
+
+```php
+// The scheduler picks events in a ±30-minute window around the target
+// Artisan::call returns the exit code (0 = success)
+Artisan::call('events:send-reminders', ['--hours' => 72]);
+echo Artisan::output();
+```
+
+### Format an event date (the same logic used in emails)
+
+```php
+use App\Support\EventDateFormatter;
+EventDateFormatter::format(1735689600, 1735696800, 'Asia/Tokyo');
+// → "Wed, 01 Jan 2025 at 9:00 AM JST – 11:00 AM"
+```
 
 ## Queue & Email
 

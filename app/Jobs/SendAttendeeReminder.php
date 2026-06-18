@@ -5,8 +5,7 @@ namespace App\Jobs;
 use App\Mail\AttendeeReminder;
 use App\Models\Attendee;
 use App\Services\LocationService;
-use DateTimeImmutable;
-use DateTimeZone;
+use App\Support\EventDateFormatter;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\SerializesModels;
@@ -48,31 +47,10 @@ class SendAttendeeReminder implements ShouldQueue
             eventType: $event->type,
             locationLabel: $locationInfo['label'] ?? null,
             venueName: ($payload['venue'] ?? [])['name'] ?? null,
-            dateFormatted: $this->formatDate($startsAt, $endsAt, $timezone),
+            dateFormatted: EventDateFormatter::format($startsAt, $endsAt, $timezone),
             reminderLabel: $this->reminderLabel,
             imageUrl: $event->images->first()?->url(),
         ));
     }
 
-    private function formatDate(?int $startsAt, ?int $endsAt, string $timezone): string
-    {
-        if (! $startsAt) {
-            return 'Date to be confirmed';
-        }
-
-        $tz = new DateTimeZone($timezone);
-        $start = (new DateTimeImmutable())->setTimestamp($startsAt)->setTimezone($tz);
-        $formatted = $start->format('D, d M Y \a\t g:i A T');
-
-        if ($endsAt && $endsAt > $startsAt) {
-            $end = (new DateTimeImmutable())->setTimestamp($endsAt)->setTimezone($tz);
-            if ($start->format('Y-m-d') === $end->format('Y-m-d')) {
-                $formatted .= ' – '.$end->format('g:i A');
-            } else {
-                $formatted .= ' – '.$end->format('D, d M Y \a\t g:i A T');
-            }
-        }
-
-        return $formatted;
-    }
 }
