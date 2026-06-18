@@ -12,6 +12,10 @@ class AttendeeController extends Controller
 {
     public function store(Request $request, Event $event): RedirectResponse
     {
+        if (\in_array($event->status, ['cancelled', 'sold_out'])) {
+            abort(403, 'Registration is not available for this event.');
+        }
+
         $validated = $request->validate([
             'name'  => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],

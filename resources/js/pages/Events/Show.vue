@@ -135,7 +135,7 @@ const activeImage = ref(0);
 
             <!-- Right sidebar: registration -->
             <div class="lg:col-span-1">
-                <RegisterInterest :event-id="event.id" :attendee-count="attendee_count" />
+                <RegisterInterest :event-id="event.id" :attendee-count="attendee_count" :event-status="event.status" />
             </div>
         </div>
     </div>

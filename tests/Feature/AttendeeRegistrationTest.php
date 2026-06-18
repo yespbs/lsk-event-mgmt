@@ -10,7 +10,7 @@ uses(RefreshDatabase::class);
 
 it('registers a new attendee and persists the record', function () {
     Queue::fake();
-    $event = Event::factory()->create();
+    $event = Event::factory()->create(['status' => 'published']);
 
     $this->post(route('events.attendees.store', $event), [
         'name'  => 'Jane Doe',
@@ -26,7 +26,7 @@ it('registers a new attendee and persists the record', function () {
 
 it('dispatches a confirmation job on successful registration', function () {
     Queue::fake();
-    $event = Event::factory()->create();
+    $event = Event::factory()->create(['status' => 'published']);
 
     $this->post(route('events.attendees.store', $event), [
         'name'  => 'Jane Doe',
@@ -39,7 +39,7 @@ it('dispatches a confirmation job on successful registration', function () {
 });
 
 it('rejects a duplicate email for the same event', function () {
-    $event = Event::factory()->create();
+    $event = Event::factory()->create(['status' => 'published']);
     $event->attendees()->create(['name' => 'Jane Doe', 'email' => 'jane@example.com']);
 
     $this->post(route('events.attendees.store', $event), [
@@ -52,8 +52,8 @@ it('rejects a duplicate email for the same event', function () {
 
 it('allows the same email on two different events', function () {
     Queue::fake();
-    $eventA = Event::factory()->create();
-    $eventB = Event::factory()->create();
+    $eventA = Event::factory()->create(['status' => 'published']);
+    $eventB = Event::factory()->create(['status' => 'published']);
     $eventA->attendees()->create(['name' => 'Jane Doe', 'email' => 'jane@example.com']);
 
     $this->post(route('events.attendees.store', $eventB), [
@@ -65,14 +65,14 @@ it('allows the same email on two different events', function () {
 });
 
 it('validates that name and email are required', function () {
-    $event = Event::factory()->create();
+    $event = Event::factory()->create(['status' => 'published']);
 
     $this->post(route('events.attendees.store', $event), [])
         ->assertSessionHasErrors(['name', 'email']);
 });
 
 it('validates that the email field contains a valid address', function () {
-    $event = Event::factory()->create();
+    $event = Event::factory()->create(['status' => 'published']);
 
     $this->post(route('events.attendees.store', $event), [
         'name'  => 'Jane Doe',
@@ -82,12 +82,34 @@ it('validates that the email field contains a valid address', function () {
 
 it('returns the flash success message after registration', function () {
     Queue::fake();
-    $event = Event::factory()->create();
+    $event = Event::factory()->create(['status' => 'published']);
 
     $this->post(route('events.attendees.store', $event), [
         'name'  => 'Jane Doe',
         'email' => 'jane@example.com',
     ])->assertSessionHas('success');
+});
+
+it('rejects registration for a cancelled event with 403', function () {
+    $event = Event::factory()->create(['status' => 'cancelled']);
+
+    $this->post(route('events.attendees.store', $event), [
+        'name'  => 'Jane Doe',
+        'email' => 'jane@example.com',
+    ])->assertForbidden();
+
+    $this->assertDatabaseCount('attendees', 0);
+});
+
+it('rejects registration for a sold_out event with 403', function () {
+    $event = Event::factory()->create(['status' => 'sold_out']);
+
+    $this->post(route('events.attendees.store', $event), [
+        'name'  => 'Jane Doe',
+        'email' => 'jane@example.com',
+    ])->assertForbidden();
+
+    $this->assertDatabaseCount('attendees', 0);
 });
 
 it('includes the accurate attendee count on the event show page', function () {

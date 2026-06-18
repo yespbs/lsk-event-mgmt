@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { CheckCircle, Users } from '@lucide/vue';
-import { ref } from 'vue';
+import { Ban, CheckCircle, ShoppingBag, Users } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,18 @@ import { Label } from '@/components/ui/label';
 const props = defineProps<{
     eventId: string;
     attendeeCount: number;
+    eventStatus: string;
 }>();
+
+const registrationClosed = computed(() =>
+    props.eventStatus === 'cancelled' || props.eventStatus === 'sold_out',
+);
+
+const closedMessage = computed(() =>
+    props.eventStatus === 'cancelled'
+        ? 'This event has been cancelled.'
+        : 'This event is sold out.',
+);
 
 const succeeded = ref(false);
 
@@ -38,9 +49,22 @@ function submit() {
             </span>
         </div>
 
+        <!-- Registration closed -->
+        <div
+            v-if="registrationClosed"
+            class="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+        >
+            <ShoppingBag v-if="eventStatus === 'sold_out'" :size="18" class="mt-0.5 shrink-0" />
+            <Ban v-else :size="18" class="mt-0.5 shrink-0" />
+            <div>
+                <p class="font-medium">{{ closedMessage }}</p>
+                <p class="mt-0.5 text-destructive/70">Registration is no longer available.</p>
+            </div>
+        </div>
+
         <!-- Success state -->
         <div
-            v-if="succeeded"
+            v-else-if="succeeded"
             class="flex items-center gap-3 rounded-lg bg-green-50 p-4 text-sm text-green-800 dark:bg-green-950/30 dark:text-green-400"
         >
             <CheckCircle :size="18" class="shrink-0" />
