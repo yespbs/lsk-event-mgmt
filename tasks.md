@@ -8,5 +8,5 @@
 - [x] **T6** — Event Visuals 2: distinct second layout (timeline / map / calendar)
 - [x] **T7** — Attendee registration: `attendees` table + register-interest form on event pages
 - [x] **T8** — Confirmation email: queued job sent when attendee is added
-- [ ] **T9** — Reminder emails: scheduled commands for 3-day and 24-hour reminders
+- [x] **T9** — Reminder emails: scheduled commands for 3-day and 24-hour reminders
 - [ ] **T10** — Decisions note: document image storage, address, timezone, layout choices
