@@ -12,8 +12,8 @@ A running log of every prompt sent in this project session.
 > - scan the project and create a README with project structure, and features and how tos
 
 **[2]**
-> greate, now a unique request.
-> I need you to create a prompts_history.md file in current project folder and record each prompt I am seeding you
+> great, now a unique request.
+> I need you to create a prompts_history.md file in current project folder and record each prompt I am sending you
 
 **[3]**
 > There is an INVALID_ANNOTATION when I run npm install and npm run build.
@@ -36,7 +36,7 @@ A running log of every prompt sent in this project session.
 > awesome, now work on T3
 
 **[9]**
-> well done, strt with T4
+> well done, start with T4
 
 **[10]**
 > nice, proceed with T5
@@ -55,3 +55,20 @@ A running log of every prompt sent in this project session.
 
 **[15]**
 > fine, work on T10
+
+**[16]**
+> fantastic, additionally, we have tests for the changes we did, if not lets propose a set of tests you think should be included
+
+**[17]**
+> please attempt all of them, provided session is within usage limit
+
+**[18]**
+> update README with instructions on how to run tests
+> also, include how to seed the dummy data using tinker for other devs evaluating the code
+
+**[19]**
+> check and fix
+> event detail page records interests but cancelled events should not allow interests, Disable register interest for cancelled and sold_out events, both backend and frontend
+
+**[20]**
+> can you capture and record last few prompts that were not saved in prompts_history.md?
