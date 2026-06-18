@@ -12,7 +12,9 @@ it('renders the events listing shell without authentication', function () {
         ->assertInertia(fn ($page) => $page
             ->component('Events/Index')
             ->has('statuses', 4)
-            ->where('filters.from', '2023-01-01')
+            ->where('filters.date_from', null)
+            ->where('filters.status', null)
+            ->where('filters.location', null)
         );
 });
 
