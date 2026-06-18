@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attendee;
+use App\Jobs\SendAttendeeConfirmation;
 use App\Models\Event;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,8 +29,7 @@ class AttendeeController extends Controller
 
         $attendee = $event->attendees()->create($validated);
 
-        // Confirmation email dispatched in T8
-        // dispatch(new \App\Jobs\SendAttendeeConfirmation($attendee));
+        dispatch(new SendAttendeeConfirmation($attendee));
 
         return back()->with('success', "You're on the list, {$attendee->name}! Check your inbox for a confirmation.");
     }
