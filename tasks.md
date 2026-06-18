@@ -4,7 +4,7 @@
 - [x] **T2** — Address resolution: lat/lng → human-readable location label on the API
 - [x] **T3** — Date/time display: timezone strategy + shared frontend formatter
 - [x] **T4** — Filtering: extend API with date range + location params; reusable frontend filter controls
-- [ ] **T5** — Event Visuals 1: responsive card grid with images, filters, and animations
+- [x] **T5** — Event Visuals 1: responsive card grid with images, filters, and animations
 - [ ] **T6** — Event Visuals 2: distinct second layout (timeline / map / calendar)
 - [ ] **T7** — Attendee registration: `attendees` table + register-interest form on event pages
 - [ ] **T8** — Confirmation email: queued job sent when attendee is added

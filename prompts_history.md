@@ -8,6 +8,7 @@ A running log of every prompt sent in this project session.
 
 **[1]**
 > we will work on a new project in src/rocky_events/code
+>
 > - scan the project and create a README with project structure, and features and how tos
 
 **[2]**
@@ -36,3 +37,6 @@ A running log of every prompt sent in this project session.
 
 **[9]**
 > well done, strt with T4
+
+**[10]**
+> nice, proceed with T5

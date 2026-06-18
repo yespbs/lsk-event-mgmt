@@ -46,6 +46,16 @@ class EventController extends Controller
         ]);
     }
 
+    public function visualOne(Request $request): Response
+    {
+        return Inertia::render('Events/VisualOne', $this->sharedPageProps($request));
+    }
+
+    public function visualTwo(Request $request): Response
+    {
+        return Inertia::render('Events/VisualTwo', $this->sharedPageProps($request));
+    }
+
     public function show(Event $event): Response
     {
         $event->load(['user', 'images']);
@@ -96,19 +106,32 @@ class EventController extends Controller
     }
 
     /** @return array<string, mixed> */
+    private function sharedPageProps(Request $request): array
+    {
+        return [
+            'filters' => [
+                'status'    => $request->input('status'),
+                'date_from' => $request->input('date_from'),
+                'date_to'   => $request->input('date_to'),
+                'location'  => $request->input('location'),
+            ],
+            'statuses' => ['draft', 'published', 'cancelled', 'sold_out'],
+            'cities'   => $this->location->cities(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
     private function formatEvent(Event $event): array
     {
         $location = ($event->latitude !== null && $event->longitude !== null)
             ? $this->location->resolve($event->latitude, $event->longitude)
             : null;
 
-        return array_merge(
-            $event->toArray(),
-            [
-                'images'         => $event->images->map(fn ($img) => $img->url())->values(),
-                'location_label' => $location['label'] ?? null,
-                'timezone'       => $location['timezone'] ?? 'UTC',
-            ]
-        );
+        return [
+            ...$event->toArray(),
+            'images'         => $event->images->map(fn ($img) => $img->url())->values(),
+            'location_label' => $location['label'] ?? null,
+            'timezone'       => $location['timezone'] ?? 'UTC',
+        ];
     }
 }
