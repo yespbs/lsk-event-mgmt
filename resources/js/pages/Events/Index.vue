@@ -1,25 +1,21 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import EventFilters from '@/components/EventFilters.vue';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-
-interface EventRow {
-    id: string;
-    type: string;
-    status: string;
-    created_time: number | null;
-    user: { id: number; name: string } | null;
-}
+import type { EventFilters as EventFiltersType, EventRow } from '@/types';
 
 const props = defineProps<{
-    filters: { status: string | null; from: string };
+    filters: { status: string | null; date_from: string | null; date_to: string | null; location: string | null };
     statuses: string[];
+    cities: string[];
 }>();
 
-const form = reactive({
+const form = reactive<EventFiltersType>({
     status: props.filters.status ?? '',
-    from: props.filters.from ?? '',
+    date_from: props.filters.date_from ?? '',
+    date_to: props.filters.date_to ?? '',
+    location: props.filters.location ?? '',
 });
 
 const rows = ref<EventRow[]>([]);
@@ -44,14 +40,14 @@ const loadedSize = computed(() => {
 const loadedSeconds = computed(() => (loadedMs.value / 1000).toFixed(1));
 
 async function loadMore() {
-    if (loading.value || !hasMore.value) {
-        return;
-    }
+    if (loading.value || !hasMore.value) return;
     loading.value = true;
 
     const params = new URLSearchParams({ page: String(page.value + 1) });
     if (form.status) params.set('status', form.status);
-    if (form.from) params.set('from', form.from);
+    if (form.date_from) params.set('date_from', form.date_from);
+    if (form.date_to) params.set('date_to', form.date_to);
+    if (form.location) params.set('location', form.location);
 
     try {
         const response = await fetch(`/events/data?${params.toString()}`, {
@@ -98,15 +94,11 @@ const statusVariant = (status: string) => {
 onMounted(() => {
     observer = new IntersectionObserver(
         (entries) => {
-            if (entries[0]?.isIntersecting) {
-                loadMore();
-            }
+            if (entries[0]?.isIntersecting) loadMore();
         },
         { rootMargin: '400px' },
     );
-    if (sentinel.value) {
-        observer.observe(sentinel.value);
-    }
+    if (sentinel.value) observer.observe(sentinel.value);
     loadMore();
 });
 
@@ -124,29 +116,7 @@ onBeforeUnmount(() => observer?.disconnect());
             </p>
         </div>
 
-        <form class="flex flex-wrap items-end gap-3" @submit.prevent>
-            <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted-foreground" for="status">Status</label>
-                <select
-                    id="status"
-                    v-model="form.status"
-                    class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                    <option value="">All</option>
-                    <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
-                </select>
-            </div>
-            <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted-foreground" for="from">From</label>
-                <input
-                    id="from"
-                    v-model="form.from"
-                    type="date"
-                    class="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                />
-            </div>
-            <Button type="button" @click.prevent="applyFilters">Filter</Button>
-        </form>
+        <EventFilters v-model="form" :statuses="statuses" :cities="cities" @apply="applyFilters" />
 
         <div class="overflow-x-auto rounded-lg border">
             <table class="w-full text-sm">
@@ -155,6 +125,7 @@ onBeforeUnmount(() => observer?.disconnect());
                         <th class="px-3 py-2 font-medium">ID</th>
                         <th class="px-3 py-2 font-medium">Type</th>
                         <th class="px-3 py-2 font-medium">Status</th>
+                        <th class="px-3 py-2 font-medium">Location</th>
                         <th class="px-3 py-2 font-medium">User</th>
                         <th class="px-3 py-2 font-medium">Time</th>
                         <th class="px-3 py-2"></th>
@@ -167,6 +138,7 @@ onBeforeUnmount(() => observer?.disconnect());
                         <td class="px-3 py-2">
                             <Badge :variant="statusVariant(event.status)">{{ event.status }}</Badge>
                         </td>
+                        <td class="px-3 py-2 text-xs text-muted-foreground">{{ event.location_label ?? '—' }}</td>
                         <td class="px-3 py-2">{{ event.user?.name ?? '—' }}</td>
                         <td class="px-3 py-2 font-mono text-xs">{{ event.created_time }}</td>
                         <td class="px-3 py-2 text-right">
@@ -174,7 +146,7 @@ onBeforeUnmount(() => observer?.disconnect());
                         </td>
                     </tr>
                     <tr v-if="!loading && hasLoadedOnce && rows.length === 0">
-                        <td colspan="6" class="px-3 py-8 text-center text-muted-foreground">No events found.</td>
+                        <td colspan="7" class="px-3 py-8 text-center text-muted-foreground">No events found.</td>
                     </tr>
                 </tbody>
             </table>

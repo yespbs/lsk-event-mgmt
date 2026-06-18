@@ -99,6 +99,44 @@ class LocationService
     ];
 
     /**
+     * Unique sorted city labels for use in filter dropdowns.
+     *
+     * @return list<string>
+     */
+    public function cities(): array
+    {
+        $seen = [];
+        $cities = [];
+        foreach (self::ANCHORS as [,, $city, $country]) {
+            $label = "{$city}, {$country}";
+            if (! isset($seen[$label])) {
+                $seen[$label] = true;
+                $cities[] = $label;
+            }
+        }
+        sort($cities);
+
+        return $cities;
+    }
+
+    /**
+     * Return the lat/lng anchor for a city label, used to build a bounding-box
+     * filter query. Returns null if the city is not in the list.
+     *
+     * @return array{lat: float, lng: float}|null
+     */
+    public function anchorFor(string $cityLabel): ?array
+    {
+        foreach (self::ANCHORS as [$lat, $lng, $city, $country]) {
+            if ("{$city}, {$country}" === $cityLabel) {
+                return ['lat' => $lat, 'lng' => $lng];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @return array{label: string, city: string, country: string, timezone: string}
      */
     public function resolve(float $lat, float $lng): array
