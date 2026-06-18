@@ -27,3 +27,12 @@ A running log of every prompt sent in this project session.
 
 **[6]**
 > start with T1 but first, document the prompt and create a tasks.md file with checkable list
+
+**[7]**
+> great, now proceed with T2
+
+**[8]**
+> awesome, now work on T3
+
+**[9]**
+> well done, strt with T4

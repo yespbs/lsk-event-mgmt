@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Services\LocationService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Inertia\Response;
 
 class EventController extends Controller
 {
+    public function __construct(private readonly LocationService $location) {}
+
     public function index(Request $request): Response
     {
         return Inertia::render('Events/Index', [
@@ -26,10 +29,7 @@ class EventController extends Controller
     {
         [$events, $stats] = $this->loadListing($request);
 
-        $items = collect($events->items())->map(fn ($event) => array_merge(
-            $event->toArray(),
-            ['images' => $event->images->map(fn ($img) => $img->url())->values()]
-        ));
+        $items = collect($events->items())->map(fn ($event) => $this->formatEvent($event));
 
         return response()->json([
             'data' => $items,
@@ -45,10 +45,7 @@ class EventController extends Controller
         $event->load(['user', 'images']);
 
         return Inertia::render('Events/Show', [
-            'event' => array_merge(
-                $event->toArray(),
-                ['images' => $event->images->map(fn ($img) => $img->url())->values()]
-            ),
+            'event' => $this->formatEvent($event),
         ]);
     }
 
@@ -71,5 +68,22 @@ class EventController extends Controller
         ];
 
         return [$events, $stats];
+    }
+
+    /** @return array<string, mixed> */
+    private function formatEvent(Event $event): array
+    {
+        $location = ($event->latitude !== null && $event->longitude !== null)
+            ? $this->location->resolve($event->latitude, $event->longitude)
+            : null;
+
+        return array_merge(
+            $event->toArray(),
+            [
+                'images' => $event->images->map(fn ($img) => $img->url())->values(),
+                'location_label' => $location['label'] ?? null,
+                'timezone' => $location['timezone'] ?? 'UTC',
+            ]
+        );
     }
 }
