@@ -61,7 +61,8 @@ class EventController extends Controller
         $event->load(['user', 'images']);
 
         return Inertia::render('Events/Show', [
-            'event' => $this->formatEvent($event),
+            'event'          => $this->formatEvent($event),
+            'attendee_count' => $event->attendees()->count(),
         ]);
     }
 

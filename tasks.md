@@ -6,7 +6,7 @@
 - [x] **T4** — Filtering: extend API with date range + location params; reusable frontend filter controls
 - [x] **T5** — Event Visuals 1: responsive card grid with images, filters, and animations
 - [x] **T6** — Event Visuals 2: distinct second layout (timeline / map / calendar)
-- [ ] **T7** — Attendee registration: `attendees` table + register-interest form on event pages
+- [x] **T7** — Attendee registration: `attendees` table + register-interest form on event pages
 - [ ] **T8** — Confirmation email: queued job sent when attendee is added
 - [ ] **T9** — Reminder emails: scheduled commands for 3-day and 24-hour reminders
 - [ ] **T10** — Decisions note: document image storage, address, timezone, layout choices
